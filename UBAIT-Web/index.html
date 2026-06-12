@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reiter Lab UBAIT LC-MS/MS Data</title>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --unique: #d97706;
+      --up: #dc2626;
+      --down: #2563eb;
+      --notsig: #64748b;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 22px 24px;
+      background: linear-gradient(135deg, #1e3a8a, #2563eb);
+      color: white;
+    }
+    header h1 {
+      margin: 0 0 6px 0;
+      font-size: 28px;
+    }
+    header p {
+      margin: 0;
+      opacity: 0.9;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 22px;
+      display: grid;
+      gap: 16px;
+    }
+    .controls, .panel, .table-wrap, .chart-wrap, .pager {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    }
+    .controls {
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 10px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      background: white;
+      color: var(--text);
+    }
+    button {
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .content {
+      display: grid;
+      grid-template-columns: 1.18fr 0.82fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .table-wrap, .panel, .chart-wrap, .pager {
+      padding: 14px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 6px;
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 1;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 6px 6px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: top;
+      line-height: 1.2;
+    }
+    tbody tr:hover {
+      background: #f8fafc;
+      cursor: pointer;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 7px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      color: white;
+    }
+    .badge.unique { background: var(--unique); }
+    .badge.up { background: var(--up); }
+    .badge.down { background: var(--down); }
+    .badge.notsig { background: var(--notsig); }
+    .muted { color: var(--muted); }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    .detail-grid div {
+      padding: 9px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+    .detail-grid label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+    .chart-wrap {
+      margin-top: 16px;
+    }
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .topline {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .pill {
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 999px;
+      font-size: 12px;
+    }
+    .pager {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .pager .left, .pager .right {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 1100px) {
+      .content { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Reiter Lab UBAIT LC-MS/MS Data</h1>
+    <p>Search proteins across your LC-MS/MS datasets and inspect volcano placement.</p>
+    <div class="topline">
+      <span class="pill">Unique proteins are marked as imputed for volcano display</span>
+      <span class="pill">15 proteins per page</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="controls">
+      <input id="searchBox" placeholder="Search accession, gene, or protein name..." />
+      <select id="driverFilter">
+        <option value="">All drivers</option>
+      </select>
+      <select id="statusFilter">
+        <option value="">All statuses</option>
+        <option value="Up">Up</option>
+        <option value="Down">Down</option>
+        <option value="NotSig">NotSig</option>
+        <option value="Unique">Unique</option>
+      </select>
+    </div>
+
+    <div class="pager">
+      <div class="left">
+        <button id="prevPageBtn">Previous</button>
+        <button id="nextPageBtn">Next</button>
+        <span id="pageInfo" class="muted"></span>
+      </div>
+      <div class="right">
+        <span id="countInfo" class="muted"></span>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="table-wrap">
+        <table id="resultsTable">
+          <thead>
+            <tr>
+              <th data-sort="accession">Accession</th>
+              <th data-sort="description">Description</th>
+              <th data-sort="driver_name">Driver</th>
+              <th data-sort="log2_fc">log2FC</th>
+              <th data-sort="adj_p_value">adj.P</th>
+              <th data-sort="status">Status</th>
+              <th data-sort="was_unique">Unique</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="panel" id="detailPanel">
+        <h2 style="margin-top:0;">Protein detail</h2>
+        <p class="muted">Select a row to inspect measurement values.</p>
+        <div id="detailContent"></div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+        <h2 style="margin:0;">Volcano plot</h2>
+        <select id="volcanoDriver" style="max-width:260px;">
+          <option value="">All drivers</option>
+        </select>
+      </div>
+      <div id="volcano" style="height:520px;"></div>
+      <p class="small">Hover over a point to see the protein accession, description, and stats.</p>
+    </div>
+  </div>
+
+  <script>
+    let allData = [];
+    let groupedData = {};
+    const state = { sortKey: "log2_fc", sortAsc: false, currentPage: 1, pageSize: 15 };
+
+    const searchBox = document.getElementById("searchBox");
+    const driverFilter = document.getElementById("driverFilter");
+    const statusFilter = document.getElementById("statusFilter");
+    const volcanoDriver = document.getElementById("volcanoDriver");
+    const tbody = document.querySelector("#resultsTable tbody");
+    const detailContent = document.getElementById("detailContent");
+    const pageInfo = document.getElementById("pageInfo");
+    const countInfo = document.getElementById("countInfo");
+    const prevPageBtn = document.getElementById("prevPageBtn");
+    const nextPageBtn = document.getElementById("nextPageBtn");
+
+    async function loadData() {
+      const res = await fetch("data.json");
+      const json = await res.json();
+
+      groupedData = {};
+      allData = [];
+
+      json.experiments.forEach(exp => {
+        groupedData[exp.driver_name] = exp.proteins || [];
+        (exp.proteins || []).forEach(p => {
+          allData.push({ ...p, driver_name: exp.driver_name });
+        });
+      });
+
+      const drivers = Object.keys(groupedData);
+      populateDrivers(drivers);
+      renderAll();
+      if (allData.length) showDetail(allData[0]);
+    }
+
+    function populateDrivers(drivers) {
+      [driverFilter, volcanoDriver].forEach(sel => {
+        const current = sel.value;
+        [...sel.querySelectorAll("option:not(:first-child)")].forEach(o => o.remove());
+        drivers.sort().forEach(d => {
+          const opt = document.createElement("option");
+          opt.value = d;
+          opt.textContent = d;
+          sel.appendChild(opt);
+        });
+        if (current) sel.value = current;
+      });
+    }
+
+    function badge(status) {
+      const cls = status === "Unique" ? "unique" : (status || "notsig").toLowerCase();
+      return `<span class="badge ${cls}">${status || "NotSig"}</span>`;
+    }
+
+    function filteredData() {
+      const q = searchBox.value.trim().toLowerCase();
+      const driver = driverFilter.value;
+      const status = statusFilter.value;
+
+      return allData.filter(d => {
+        const matchesQ =
+          !q ||
+          (d.accession || "").toLowerCase().includes(q) ||
+          (d.description || "").toLowerCase().includes(q) ||
+          (d.gene_symbol || "").toLowerCase().includes(q);
+        const matchesDriver = !driver || d.driver_name === driver;
+        const matchesStatus = !status || d.status === status;
+        return matchesQ && matchesDriver && matchesStatus;
+      }).sort((a, b) => {
+        const x = a[state.sortKey];
+        const y = b[state.sortKey];
+        if (x === y) return 0;
+        if (x == null) return 1;
+        if (y == null) return -1;
+        if (typeof x === "number" && typeof y === "number") return state.sortAsc ? x - y : y - x;
+        return state.sortAsc ? String(x).localeCompare(String(y)) : String(y).localeCompare(String(x));
+      });
+    }
+
+    function getPageRows(rows) {
+      const start = (state.currentPage - 1) * state.pageSize;
+      return rows.slice(start, start + state.pageSize);
+    }
+
+    function renderTable() {
+      const rows = filteredData();
+      const totalPages = Math.max(1, Math.ceil(rows.length / state.pageSize));
+      if (state.currentPage > totalPages) state.currentPage = totalPages;
+
+      const pageRows = getPageRows(rows);
+      tbody.innerHTML = pageRows.map(d => `
+        <tr onclick='showDetail(${JSON.stringify(d).replace(/'/g, "\\'")})'>
+          <td>${d.accession || ""}</td>
+          <td>${d.description || ""}</td>
+          <td>${d.driver_name || ""}</td>
+          <td>${typeof d.log2_fc === "number" ? d.log2_fc.toFixed(2) : ""}</td>
+          <td>${typeof d.adj_p_value === "number" ? d.adj_p_value.toExponential(2) : ""}</td>
+          <td>${badge(d.status)}</td>
+          <td>${d.was_unique ? "Yes" : "No"}</td>
+        </tr>
+      `).join("");
+
+      pageInfo.textContent = `Page ${state.currentPage} of ${totalPages}`;
+      countInfo.textContent = `${rows.length} proteins found`;
+      prevPageBtn.disabled = state.currentPage <= 1;
+      nextPageBtn.disabled = state.currentPage >= totalPages;
+    }
+
+    function showDetail(d) {
+      detailContent.innerHTML = `
+        <div class="detail-grid">
+          <div><label>Accession</label>${d.accession || ""}</div>
+          <div><label>Driver</label>${d.driver_name || ""}</div>
+          <div><label>Description</label>${d.description || ""}</div>
+          <div><label>Status</label>${badge(d.status)}</div>
+          <div><label>log2FC</label>${d.log2_fc ?? ""}</div>
+          <div><label>adj.P.Value</label>${d.adj_p_value ?? ""}</div>
+          <div><label>Unique</label>${d.was_unique ? "Yes" : "No"}</div>
+          <div><label>Volcano flag</label>${d.imputed_for_volcano ? "Imputed for display" : "Observed"}</div>
+        </div>
+      `;
+    }
+
+    function buildVolcanoTraces(points) {
+      const observed = points.filter(d => !d.imputed_for_volcano);
+      const unique = points.filter(d => d.imputed_for_volcano);
+
+      const commonHover = [
+        "Accession: %{customdata[0]}",
+        "Description: %{customdata[1]}",
+        "Driver: %{customdata[2]}",
+        "log2FC: %{x:.2f}",
+        "-log10(adj.P): %{y:.2f}",
+        "<extra></extra>"
+      ].join("<br>");
+
+      return [
+        {
+          x: observed.map(d => d.log2_fc),
+          y: observed.map(d => d.neg_log10_adj_p),
+          mode: "markers",
+          type: "scatter",
+          name: "Observed",
+          marker: { color: "#2563eb", size: 10 },
+          customdata: observed.map(d => [d.accession || "", d.description || "", d.driver_name || ""]),
+          hovertemplate: commonHover
+        },
+        {
+          x: unique.map(d => d.log2_fc),
+          y: unique.map(d => d.neg_log10_adj_p),
+          mode: "markers",
+          type: "scatter",
+          name: "Unique / imputed",
+          marker: { color: "#d97706", size: 11, symbol: "diamond" },
+          customdata: unique.map(d => [d.accession || "", d.description || "", d.driver_name || ""]),
+          hovertemplate: commonHover
+        }
+      ];
+    }
+
+    function renderVolcano() {
+      const chosen = volcanoDriver.value;
+      const points = chosen ? allData.filter(d => d.driver_name === chosen) : allData;
+
+      Plotly.newPlot("volcano", buildVolcanoTraces(points), {
+        margin: { l: 60, r: 20, t: 20, b: 60 },
+        xaxis: { title: "log2FC", zeroline: true },
+        yaxis: { title: "-log10(adj.P.Value)" },
+        paper_bgcolor: "white",
+        plot_bgcolor: "white",
+        legend: { orientation: "h" }
+      }, { responsive: true });
+    }
+
+    function renderAll() {
+      renderTable();
+      renderVolcano();
+    }
+
+    document.querySelectorAll("th[data-sort]").forEach(th => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.sort;
+        state.sortAsc = state.sortKey === key ? !state.sortAsc : true;
+        state.sortKey = key;
+        state.currentPage = 1;
+        renderAll();
+      });
+    });
+
+    searchBox.addEventListener("input", () => { state.currentPage = 1; renderAll(); });
+    driverFilter.addEventListener("change", () => { state.currentPage = 1; renderAll(); });
+    statusFilter.addEventListener("change", () => { state.currentPage = 1; renderTable(); });
+    volcanoDriver.addEventListener("change", renderVolcano);
+
+    prevPageBtn.addEventListener("click", () => {
+      if (state.currentPage > 1) {
+        state.currentPage--;
+        renderTable();
+      }
+    });
+
+    nextPageBtn.addEventListener("click", () => {
+      const rows = filteredData();
+      const totalPages = Math.max(1, Math.ceil(rows.length / state.pageSize));
+      if (state.currentPage < totalPages) {
+        state.currentPage++;
+        renderTable();
+      }
+    });
+
+    loadData();
+  </script>
+</body>
+</html>
